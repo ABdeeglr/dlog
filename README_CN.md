@@ -2,6 +2,8 @@
 
 ## dlog
 
+![Demo](https://github.com/ABdeeglr/dlog/blob/main/demo.gif)
+
 ### 再也不用到处写 README 文件来记录你的操作
 
 A command-line tool for developers to easily log their work progress.

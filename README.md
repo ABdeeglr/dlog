@@ -6,6 +6,8 @@
 
 ### No more need to write README/\*.log anywhere.
 
+![Demo](https://github.com/ABdeeglr/dlog/blob/main/demo.gif)
+
 A command-line tool for developers to easily log their work progress.
 
 `dlog` is a simple yet powerful CLI utility written in Rust, designed for developers to keep a clean, searchable log of their daily tasks and progress directly from the command line.
