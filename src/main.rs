@@ -42,27 +42,36 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    
     /// Initializes the dlog database. The default of dlog db file is "~/.config/dlog/dlog.db"
     Init {
         #[arg(default_value = "dlog.db")]
         db_name: String,
     },
-    /// Logs a new entry. Using Ctrl+D to end log. Use `-m` to log a short intry just like `git commit -m "message"`. Use `-t "<tag>" to append a tag to this log.
+
+    /// Logs a new entry. Using Ctrl+D to end log.
     Log {
+        ///Use `-m` to log a short intry just like `git commit -m "message"`. 
         #[arg(short, long)]
         message: Option<String>,
+
+        /// Use `-t <tag>` to append a tag to this log.
         #[arg(short, long)]
         tags: Option<String>,
     },
+
     /// Gets logs for the current directory.
-    /// Use `-r` 来递归查询当前目录下的日志.
-    /// Use `-t` 额外查看日志的 tag.
-    /// Use `-n <Number>` 来查询最新的若干条日志. 
     Get {
+
+        /// Use `-r` 来递归查询当前目录下的日志.
         #[arg(short, long)]
         recursive: bool,
+        
+        /// Use `-t` 额外查看日志的 tag.
         #[arg(short, long)]
         tags: bool,
+    
+        /// Use `-n <Number>` 来查询最新的若干条日志. 
         #[arg(short, long)]
         num: Option<u32>,
     },
@@ -77,6 +86,8 @@ fn main() {
     config_dir.push(".config/dlog");
 
     match &cli.command {
+
+
         Some(Commands::Init { db_name }) => {
             let mut db_path = config_dir.clone();
             db_path.push(db_name);
@@ -90,6 +101,8 @@ fn main() {
                 }
             }
         },
+
+
         Some(Commands::Log { message, tags }) => {
             let log_content = if let Some(msg) = message {
                 // 如果用户提供了 -m 参数，直接使用其内容
@@ -135,6 +148,8 @@ fn main() {
                 Err(e) => eprintln!("无法连接到数据库: {}", e),
             }
         },
+
+
         Some(Commands::Get { recursive, tags, num }) => {
             let current_dir = std::env::current_dir()
                 .expect("Failed to get current directory")
@@ -171,6 +186,8 @@ fn main() {
 
             get_logs_and_print(&db_path, &query, &params_slice, *tags);
         },
+
+
         None => {
             println!("没有指定任何命令。使用 --help 查看可用命令。");
         }
