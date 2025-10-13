@@ -140,16 +140,3 @@ All logs are stored in:
 This is a standard SQLite database — you can inspect it with any SQLite client.
 
 ---
-
-Made with ❤️ for developers who love the terminal.
-
-
-
-
-
-
-3. 如果你已发布到 crates.io 或有 CI/CD，也可以在 README 中加入徽章（如 build status、version 等）。
-
----
-
-需要我帮你生成 GitHub Actions、crates.io 发布说明，或添加 LICENSE 吗？欢迎继续提问！
