@@ -1,7 +1,7 @@
 # dlog
 
 
-[作者](https://github.com/ABdeeglr/dlog/blob/main/README.md)
+[原地址](https://github.com/ABdeeglr/dlog/blob/main/README.md)
 一个轻量、开发者友好的命令行工具，让你在终端中轻松记录每日工作进展。
 
 `dlog` 是一个基于 Rust 的命令行工具，帮助你通过**带上下文、可搜索、可打标签**的日志来追踪工作，日志自动与项目目录绑定。
