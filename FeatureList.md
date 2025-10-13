@@ -1,0 +1,44 @@
+# dlog Feature
+
+**Version: 0.1.0**
+
+- ## Lightweight Core Function
+    - ### [DOING] :eyes: log: 增加 log 内容的核心指令
+        - [x] dlog log: 长消息
+        - [x] dlog log -m : 短消息
+        - [x] dlog log -t: 标签
+        - [ ] dlog log -u: 生成一个 3 位的 Timeunit 标记 #TODO/Experimental/devtu
+        - [ ] dlog log -u \<marktag\>: log 的时候绑定一个时间标记 #TODO/Experimental/devtu
+    - ### [DOING] :eyes: logget: 查询 log 内容的核心指令
+        - [ ] dlog get -n: 当前目录最新的 n 条
+        - [x] dlog get -r: 匹配当前目录及其子目录下的 log
+        - [ ] dlog get -u (time unit): 以 GROUP By Time Unit 后进一步查询
+        - [ ] dlog get --all: 取消目录限制，在整个库中查询#TODO
+        - [x] dlog get -t: SELECT 的时候附加 tag 字段
+        - [ ] dlog get --date "YYYY-MM-DD": 相当于查询的时候 push 了 "WHERE Date=xxx" 子句
+        - [ ] dlog get --time "HH:MM:SS HH:MM:SS": 相当于查询的时候 push 了 "WHERE TIME <= xxx AND TIME >= xxx"
+        - [ ] dlog get --time "YYYY-MM-DD:HH-MM-SS YYYY-MM-DD:HH-MM-SS"
+        - [ ] dlog get -s "string" : 进一步筛选出包含此字符串的log，默认当前目录，加上 --all 则在所有目录
+    - ### [PENDING] :zzz: fix: 更新 log 内容的核心指令
+        - dlog fix : 默认编辑当前目录最近的一条log，参数为log编号
+        - dlog fix --all : 取消目录限制，编辑全局最新的一条
+        - dlog fix -n : 编辑当前目录倒数第n条log
+        - dlog fix -i\<n\> : 在指定log前插入一条log，参数可为log编号 -in组合则是在指定倒数第几条插入
+    - ### [PENDING] :zzz: pop: 删除 log 内容的核心指令
+        - [ ] dlog pop :默认删除当前目录最近的一条log，参数为dlog编号，可以直接删除指定编号的log，逗号分隔，多编号删除。以下所有删除命令都需要再次展示所要删除的内容并询问。
+        - [ ] dlog pop --all ：取消目录限制，删除全居的最新一条
+        - [ ] dlog pop -n : 删除当前目录最近的n条log
+        - [ ] dlog pop -r :递归清除当前目录及子目录log
+        - [ ] dlog pop -d /to/the/path : 删除指定目录的log，默认本目录（可叠加其他指令）
+        - [ ] dlog get -s "string" : 筛选出包含此字符串的log并删除，默认当前目录
+        - [ ] dlog pop -t : 删除某个标签下的所有log
+        - [ ] dlog pop --time : 按时间删除
+- ## Other
+    - ### [PENDING] :zzz: recover: 恢复被删除的笔记
+        - [ ] dlog recover：恢复最近的一条记录（全局/最多备份三十条）
+        - [ ] dlog recover -n\<n\>：恢复最近的 n 条记录
+    - ### [PENDING] :zzz: query: 核心功能是接一条 WHERE/LIMIT 字句提供给用户任意使用
+        - [ ] dlog query -s -- WHERE attribute == condition LIMIT X; // 但是不是直接让用户去访问数据库就好了？
+    - ### [PENDING] :zzz: mode(Someday Maybe): 进入一种魔法般的状态模式??
+        - [ ] dlog modestart/stop ui：监听端口提供可视化webui
+        - [ ] dlog modestart/stop command: 命令记录模式
