@@ -1,6 +1,8 @@
 
 # dlog
 
+[原地址](https://github.com/ABdeeglr/dlog/blob/main/README.md)
+
 
 
 A lightweight, developer-friendly CLI tool to log your daily progress directly in the terminal.
