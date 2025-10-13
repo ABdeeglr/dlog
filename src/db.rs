@@ -15,7 +15,7 @@
 // src/db.rs
 
 use rusqlite::{Connection, Result};
-use rusqlite::ffi::ErrorCode; // <-- 添加这行来引入正确的类型
+use rusqlite::ffi::ErrorCode;
 use std::path::Path;
 
 pub fn initialize_db(db_path: &Path) -> Result<()> {
@@ -25,7 +25,7 @@ pub fn initialize_db(db_path: &Path) -> Result<()> {
             std::fs::create_dir_all(parent)
                 .map_err(|e| rusqlite::Error::SqliteFailure(
                     rusqlite::ffi::Error {
-                        code: ErrorCode::CannotOpen, // <-- 这里现在是正确的
+                        code: ErrorCode::CannotOpen,
                         extended_code: 0
                     },
                     Some(format!("Failed to create directory: {}", e))
