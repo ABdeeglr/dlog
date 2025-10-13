@@ -1,71 +1,153 @@
-# README.md
 
-[中文文档](https://github.com/ABdeeglr/dlog/blob/main/README_CN.md)
+# dlog
 
-### `dlog`
 
-A command-line tool for developers to easily log their work progress.
 
-`dlog` is a simple yet powerful CLI utility written in Rust, designed for developers to keep a clean, searchable log of their daily tasks and progress directly from the command line.
+A lightweight, developer-friendly CLI tool to log your daily progress directly in the terminal.
 
-#### Features
+`dlog` is a Rust-based command-line utility that helps you track your work with contextual, searchable, and taggable logs tied to your project directories.
 
-- **Fast Logging:** Record a quick log with a single command.
-- **Interactive Mode:** Enter a multi-line interactive session for detailed logging.
-- **Project-Aware:** Logs are associated with your current working directory, making it easy to retrieve relevant entries.
-- **Search & Filter:** Retrieve recent logs and filter them by directory, tags, or number of entries.
+---
 
-#### Installation
+## ✨ Features
 
-Since `dlog` is a Rust project, you can install it using `cargo`:
+- **Quick Logging**: Log a one-liner with `-m`.
+- **Interactive Logging**: Write multi-line entries with `dlog log`.
+- **Directory-Aware**: Logs are automatically associated with your current working directory.
+- **Tag Support**: Add comma-separated tags (e.g., `bug,ui,urgent`) to logs.
+- **Powerful Filtering**:
+  - Filter by tag (`-t work`)
+  - Search by keyword (`-s "auth"`)
+  - Filter by date (`--date 2025-10-13`)
+  - Recursive mode (`-r`) to include subdirectories
+- **Edit & Delete**: Modify or remove logs by ID using your `$EDITOR`.
+- **SQLite Backend**: All logs stored in `~/.config/dlog/dlog.db`.
 
-1. Clone the repository to your local machine:
-   `git clone [你的仓库链接]`
-2. Navigate to the project directory:
-   `cd dlog`
-3. Build and install the binary:
-   `cargo install --path .`
+---
 
-The `dlog` executable will be placed in your Cargo bin directory (`~/.cargo/bin/`), which should be in your system's PATH.
+## 📦 Installation
 
-#### Usage
+```bash
+git clone https://github.com/ABdeeglr/dlog.git
+cd dlog
+cargo install --path .
+```
 
-##### 1. Initialize the Database
+> Make sure `~/.cargo/bin` is in your `PATH`.
 
-First, you need to create the database file that will store all your logs.
-`dlog init`
+---
 
-The database file will be created at `~/.config/dlog/dlog.db`.
+## 🚀 Usage
 
-##### 2. Log an Entry
+### 1. Initialize the database (first time only)
+```bash
+dlog init
+```
+Creates `~/.config/dlog/dlog.db`.
 
-You can log an entry in two ways:
+---
 
-- **Quick log:** For a short, one-line message.
-  `dlog log -m "Implemented the user authentication feature."`
+### 2. Record a log
 
-- **Interactive log:** For multi-line, detailed logs.
-  `dlog log`
-  _You will be prompted to enter your log message. Press `Ctrl + D` to finish and save._
+**Quick log with message and tags:**
+```bash
+dlog log -m "Fixed login bug" -t "bug,auth"
+```
 
-##### 3. View Your Logs
+**Interactive multi-line log:**
+```bash
+dlog log
+# Type your log, then press Ctrl+D to save.
+```
 
-Retrieve your logs from the command line.
+> Tags can be added interactively too by using `-t` even in interactive mode.
 
-- **View the latest log:**
-  `dlog get`
+---
 
-- **View the latest 5 logs:**
-  `dlog get -n 5`
+### 3. View logs
 
-- **View all logs from the current directory and its subdirectories:**
-  `dlog get -r`
+**Show latest 5 logs (default):**
+```bash
+dlog get
+```
 
-- **View logs with tags:**
-  `dlog get -t`
-#### 4. Edit or Delete Your Logs
+**Show last N logs:**
+```bash
+dlog get -n 10
+```
 
-- **Edit the log:**
-  `dlog fix 3`
-- **Delete the log:**
-  `dlog del 5`
+**Include subdirectories:**
+```bash
+dlog get -r
+```
+
+**Filter by tag (exact or partial match):**
+```bash
+dlog get -t bug        # shows logs with tag "bug"
+dlog get -t auth       # matches "auth" in "bug,auth"
+```
+
+**Search by keyword in content or tags:**
+```bash
+dlog get -s "login"
+```
+
+**Filter by date (YYYY-MM-DD):**
+```bash
+dlog get --date 2025-10-13
+```
+
+**Combine filters:**
+```bash
+dlog get -r -t work --date 2025-10-13 -n 20
+```
+
+> ✅ Tags are **always displayed** in output if present.
+
+---
+
+### 4. Edit or delete logs
+
+**Edit a log by ID (opens `$EDITOR`):**
+```bash
+dlog fix 3
+```
+
+**Delete a log by ID (with confirmation prompt):**
+```bash
+dlog del 5
+```
+
+> Use `dlog get` first to find the log ID.
+
+---
+
+## 🛠️ Dependencies
+
+- Rust & Cargo (for installation)
+- An editor set via `$EDITOR` (e.g., `vim`, `nano`, `code`) for `fix`
+
+---
+
+## 📁 Data Storage
+
+All logs are stored in:
+```
+~/.config/dlog/dlog.db
+```
+This is a standard SQLite database — you can inspect it with any SQLite client.
+
+---
+
+Made with ❤️ for developers who love the terminal.
+
+
+
+
+
+
+3. 如果你已发布到 crates.io 或有 CI/CD，也可以在 README 中加入徽章（如 build status、version 等）。
+
+---
+
+需要我帮你生成 GitHub Actions、crates.io 发布说明，或添加 LICENSE 吗？欢迎继续提问！
