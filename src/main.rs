@@ -23,23 +23,18 @@ use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-/**
- * # 1 参数结构体
- *
- * 描述参数结构，用于在 main 函数和 command handler 之间准确传递数据
- */
-
+/// 初始化 dlog 环境，在 ~/.config/dlog/ 目录下创建数据库文件。
 #[derive(Args, Debug)]
 pub struct InitArgs {
-    /// 指定数据库文件名 (默认为 dlog.db)
-    #[arg(short, long, default_value = "dlog.db")]
-    pub db_name: String,
-
     /// [保留] 用于未来的数据库结构升级
     #[arg(short, long)]
     pub upgrade: bool,
 }
 
+/// 记录一条新的日志。
+///
+/// 如果不提供 -m/--message 参数，程序将进入交互式输入模式，
+/// 允许多行输入，直到按下 Ctrl+D 结束。
 #[derive(Args, Debug)]
 pub struct LogArgs {
     /// 提供一条短消息直接记录 (类似 git commit -m)
@@ -55,17 +50,21 @@ pub struct LogArgs {
     pub global: bool,
 }
 
+/// 查询并显示已记录的日志。
+///
+/// 提供了丰富的筛选条件，可以组合使用来精确定位你需要的日志。
+/// 还可以附加--add-tag, --fix-path, --delete等动作参数来对查询结果进行批量操作。
 #[derive(Args, Debug)]
 pub struct GetArgs {
-    /// 递归查询当前目录及其所有子目录的日志
+    /// 递归查询，匹配当前目录及其所有子目录下的日志。
     #[arg(short, long)]
     pub recursive: bool,
 
-    /// 在结果中显示日志的标签
+    /// 在查询结果中一并显示每条日志的标签。
     #[arg(short = 't', long, visible_alias = "show-tags")]
     pub tags: bool,
 
-    /// 查询所有日志，忽略当前目录限制
+    /// 查询所有日志，忽略当前工作目录的限制。
     #[arg(long)]
     pub all: bool,
 
@@ -109,11 +108,14 @@ pub struct GetArgs {
     #[arg(long, requires = "force", group = "action")]
     pub delete: bool,
 
-    /// [安全] 必须与 --delete 一同使用，以确认删除操作
+    /// [安全] 执行危险操作如 --delete 时一同使用，以确认删除操作
     #[arg(long)]
     pub force: bool,
 }
 
+/// 精确修改某一条已存在的日志。
+///
+/// 通过唯一的标识符 (短哈希) 定位到具体某一条日志，然后对其内容、标签或目录进行更新。
 #[derive(Args, Debug)]
 pub struct FixArgs {
     /// [必需] 提供要修改的日志的唯一标识符 (短哈希)
@@ -132,6 +134,9 @@ pub struct FixArgs {
     pub directory: Option<String>,
 }
 
+/// 精确地将一条或多条日志移动到备份区。
+///
+/// 根据提供的唯一标识符 (短哈希) 精确查找，可以一次提供多个标识符进行批量操作。
 #[derive(Args, Debug)]
 pub struct PopArgs {
     /// [必需] 提供一个或多个要移除的日志的唯一标识符 (短哈希)
@@ -139,9 +144,6 @@ pub struct PopArgs {
     pub identifiers: Vec<String>,
 }
 
-/**
- * # 2 枚举命令
- */
 #[derive(Subcommand)]
 enum Commands {
     Init(InitArgs),
@@ -152,7 +154,7 @@ enum Commands {
 }
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author="ABdeeglr Ramsay", version="0.1.1", about="一个为开发者设计的、轻量级的命令行日志工具。", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
