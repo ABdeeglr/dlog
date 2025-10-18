@@ -56,46 +56,7 @@ pub struct LogArgs {
 /// 还可以附加--add-tag, --fix-path, --delete等动作参数来对查询结果进行批量操作。
 #[derive(Args, Debug)]
 pub struct GetArgs {
-    /// 递归查询，匹配当前目录及其所有子目录下的日志。
-    #[arg(short, long)]
-    pub recursive: bool,
-
-    /// 在查询结果中一并显示每条日志的标签。
-    #[arg(short = 't', long, visible_alias = "show-tags")]
-    pub tags: bool,
-
-    /// 查询所有日志，忽略当前工作目录的限制。
-    #[arg(long)]
-    pub all: bool,
-
-    /// 筛选包含特定标签的日志
-    #[arg(long, value_name = "TAG")]
-    pub tag: Option<String>,
-
-    /// 筛选今天的日志
-    #[arg(long)]
-    pub today: bool,
-
-    /// 按特定日期筛选 (格式: YYYY-MM-DD)
-    #[arg(long, value_name = "DATE")]
-    pub date: Option<String>,
-
-    /// 筛选内容中包含特定关键字的日志
-    #[arg(long, value_name = "KEYWORD")]
-    pub keyword: Option<String>,
-
-    /// 筛选最近 N 小时内的日志
-    #[arg(short = 'H', long, value_name = "HOURS")]
-    pub hour: Option<u32>,
-
-    /// 最终显示最新的 N 条日志 (默认为 10)
-    #[arg(short, long, default_value_t = 10)]
-    pub num: u32,
-
-    /// 在结果中显示每条日志的唯一标识符 (短哈希)
-    #[arg(short, long)]
-    pub identifier: bool,
-
+    /* 决定 SELECT/UPDATE/DELETE 阶段的SQL参数 */
     /// [动作] 为所有查询命中的日志追加一个新标签
     #[arg(long, group = "action", value_name = "TAG")]
     pub add_tag: Option<String>,
@@ -111,6 +72,50 @@ pub struct GetArgs {
     /// [安全] 执行危险操作如 --delete 时一同使用，以确认删除操作
     #[arg(long)]
     pub force: bool,
+
+    /* 决定 WHERE 子句的参数 其一 目录字段筛选 */
+    /// 递归查询，匹配当前目录及其所有子目录下的日志。
+    #[arg(short, long)]
+    pub recursive: bool,
+
+    /// 查询所有日志，忽略当前工作目录的限制。
+    #[arg(long)]
+    pub all: bool,
+
+    /* 决定 WHERE 子句的参数 其二 时间字段筛选 */
+    /// 筛选今天的日志
+    #[arg(long)]
+    pub today: bool,
+
+    /// 按特定日期筛选 (格式: YYYY-MM-DD)
+    #[arg(long, value_name = "DATE")]
+    pub date: Option<String>,
+
+    /// 筛选最近 N 小时内的日志
+    #[arg(short = 'H', long, value_name = "HOURS")]
+    pub hour: Option<u32>,
+
+    /* 决定 WHERE 子句的参数 其三 内容匹配筛选 */
+    /// 筛选包含特定标签的日志
+    #[arg(long, value_name = "TAG")]
+    pub tag: Option<String>,
+
+    /// 筛选内容中包含特定关键字的日志
+    #[arg(long, value_name = "KEYWORD")]
+    pub keyword: Option<String>,
+
+    /* 最终格式化输出使用的参数 */
+    /// 在结果中显示每条日志的唯一标识符 (短哈希)
+    #[arg(short, long)]
+    pub identifier: bool,
+
+    /// 在查询结果中一并显示每条日志的标签。
+    #[arg(short = 't', long, visible_alias = "show-tags")]
+    pub tags: bool,
+
+    /// 最终显示最新的 N 条日志 (默认为 1)
+    #[arg(short, long, default_value_t = 1)]
+    pub num: u32,
 }
 
 /// 精确修改某一条已存在的日志。
