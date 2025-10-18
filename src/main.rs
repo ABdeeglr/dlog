@@ -176,6 +176,15 @@ fn main() -> Result<()> {
         path
     };
 
+    if !db_path.exists() && !matches!(&cli.command, Commands::Init(_)) {
+        eprintln!("Error: database instance not initialized. Run `dlog init` firstly.");
+        return Ok(());
+    }
+
+    if db_path.exists() {
+        db::run_migrations(&db_path)?;
+    }
+
     // 核心的模式匹配与分发逻辑
     match &cli.command {
         Commands::Init(args) => commands::init::handle_init(args, &db_path)?,
