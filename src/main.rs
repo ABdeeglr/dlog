@@ -176,11 +176,13 @@ fn main() -> Result<()> {
         path
     };
 
+    // 如果用户在数据库尚未初始化的情况下执行子命令，则给出初始化提示
     if !db_path.exists() && !matches!(&cli.command, Commands::Init(_)) {
         eprintln!("Error: database instance not initialized. Run `dlog init` firstly.");
         return Ok(());
     }
 
+    // 在运行时检查版本
     if db_path.exists() {
         db::run_migrations(&db_path)?;
     }
