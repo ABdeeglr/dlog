@@ -12,241 +12,176 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 // src/main.rs
 
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
-use dirs;
-use std::io::{self, BufRead};
-use rusqlite::Connection;
-use std::env;
-use chrono::{DateTime, Utc};
-
+// 声明模块
+mod commands;
 mod db;
 
-// LogEntry 结构体，用于映射数据库查询结果
-struct LogEntry {
-    timestamp: String,
-    content: String,
-    tags: Option<String>,
-    _directory: String,
+// 引入依赖
+use anyhow::Result;
+use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
+
+/**
+ * # 1 参数结构体
+ *
+ * 描述参数结构，用于在 main 函数和 command handler 之间准确传递数据
+ */
+
+#[derive(Args, Debug)]
+pub struct InitArgs {
+    /// 指定数据库文件名 (默认为 dlog.db)
+    #[arg(short, long, default_value = "dlog.db")]
+    pub db_name: String,
+
+    /// [保留] 用于未来的数据库结构升级
+    #[arg(short, long)]
+    pub upgrade: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct LogArgs {
+    /// 提供一条短消息直接记录 (类似 git commit -m)
+    #[arg(short, long)]
+    pub message: Option<String>,
+
+    /// 为此条日志附加一个或多个标签 (逗号分隔)
+    #[arg(short, long, value_name = "TAGS")]
+    pub tags: Option<String>,
+
+    /// 将此条日志记为全局日志，不与任何特定目录关联
+    #[arg(short = 'g', long)]
+    pub global: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct GetArgs {
+    /// 递归查询当前目录及其所有子目录的日志
+    #[arg(short, long)]
+    pub recursive: bool,
+
+    /// 在结果中显示日志的标签
+    #[arg(short = 't', long, visible_alias = "show-tags")]
+    pub tags: bool,
+
+    /// 查询所有日志，忽略当前目录限制
+    #[arg(long)]
+    pub all: bool,
+
+    /// 筛选包含特定标签的日志
+    #[arg(long, value_name = "TAG")]
+    pub tag: Option<String>,
+
+    /// 筛选今天的日志
+    #[arg(long)]
+    pub today: bool,
+
+    /// 按特定日期筛选 (格式: YYYY-MM-DD)
+    #[arg(long, value_name = "DATE")]
+    pub date: Option<String>,
+
+    /// 筛选内容中包含特定关键字的日志
+    #[arg(long, value_name = "KEYWORD")]
+    pub keyword: Option<String>,
+
+    /// 筛选最近 N 小时内的日志
+    #[arg(short = 'H', long, value_name = "HOURS")]
+    pub hour: Option<u32>,
+
+    /// 最终显示最新的 N 条日志 (默认为 10)
+    #[arg(short, long, default_value_t = 10)]
+    pub num: u32,
+
+    /// 在结果中显示每条日志的唯一标识符 (短哈希)
+    #[arg(short, long)]
+    pub identifier: bool,
+
+    /// [动作] 为所有查询命中的日志追加一个新标签
+    #[arg(long, group = "action", value_name = "TAG")]
+    pub add_tag: Option<String>,
+
+    /// [动作] 批量修改所有查询命中的日志的目录信息
+    #[arg(long, group = "action", value_name = "PATH")]
+    pub fix_path: Option<String>,
+
+    /// [动作] 将查询命中的日志移动到备份区
+    #[arg(long, requires = "force", group = "action")]
+    pub delete: bool,
+
+    /// [安全] 必须与 --delete 一同使用，以确认删除操作
+    #[arg(long)]
+    pub force: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct FixArgs {
+    /// [必需] 提供要修改的日志的唯一标识符 (短哈希)
+    pub identifier: String,
+
+    /// 更新/覆盖日志的标签
+    #[arg(short, long)]
+    pub tag: Option<String>,
+
+    /// 更新/覆盖日志的内容
+    #[arg(short, long)]
+    pub content: Option<String>,
+
+    /// 更新日志的目录信息
+    #[arg(short, long)]
+    pub directory: Option<String>,
+}
+
+#[derive(Args, Debug)]
+pub struct PopArgs {
+    /// [必需] 提供一个或多个要移除的日志的唯一标识符 (短哈希)
+    #[arg(required = true, num_args = 1..)]
+    pub identifiers: Vec<String>,
+}
+
+/**
+ * # 2 枚举命令
+ */
+#[derive(Subcommand)]
+enum Commands {
+    Init(InitArgs),
+    Log(LogArgs),
+    Get(GetArgs),
+    Fix(FixArgs),
+    Pop(PopArgs),
 }
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: Commands,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    
-    /// Initializes the dlog database. The default of dlog db file is "~/.config/dlog/dlog.db"
-    Init {
-        #[arg(default_value = "dlog.db")]
-        db_name: String,
-    },
+/**
+ * # 3 主函数
+ *
+ * 进行参数解析和任务分发
+ */
 
-    /// Logs a new entry. Using Ctrl+D to end log.
-    Log {
-        ///Use `-m` to log a short intry just like `git commit -m "message"`. 
-        #[arg(short, long)]
-        message: Option<String>,
-
-        /// Use `-t <tag>` to append a tag to this log.
-        #[arg(short, long)]
-        tags: Option<String>,
-    },
-
-    /// Gets logs for the current directory.
-    Get {
-
-        /// Use `-r` 来递归查询当前目录下的日志.
-        #[arg(short, long)]
-        recursive: bool,
-        
-        /// Use `-t` 额外查看日志的 tag.
-        #[arg(short, long)]
-        tags: bool,
-    
-        /// Use `-n <Number>` 来查询最新的若干条日志. 
-        #[arg(short, long)]
-        num: Option<u32>,
-    },
-}
-
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // 构建数据库文件的路径，位于 ~/.config/dlog/
-    let home_dir = dirs::home_dir().expect("Could not find home directory");
-    let mut config_dir = PathBuf::from(&home_dir);
-    config_dir.push(".config/dlog");
+    let db_path = {
+        let home_dir = dirs::home_dir().expect("Could not find home directory");
+        let mut path = PathBuf::from(&home_dir);
+        path.push(".config/dlog/dlog.db");
+        path
+    };
 
+    // 核心的模式匹配与分发逻辑
     match &cli.command {
-
-
-        Some(Commands::Init { db_name }) => {
-            let mut db_path = config_dir.clone();
-            db_path.push(db_name);
-
-            if db_path.exists() {
-                println!("Database already exists at: {}", db_path.display());
-            } else {
-                match db::initialize_db(&db_path) {
-                    Ok(_) => println!("Database initialized at: {}", db_path.display()),
-                    Err(e) => eprintln!("Error initializing database: {}", e),
-                }
-            }
-        },
-
-
-        Some(Commands::Log { message, tags }) => {
-            let log_content = if let Some(msg) = message {
-                // 如果用户提供了 -m 参数，直接使用其内容
-                msg.clone()
-            } else {
-                // 否则，进入交互式输入模式
-                println!("进入交互式日志记录模式。按 Ctrl+D 结束输入。");
-                let mut lines = io::stdin().lock().lines();
-                let mut content = String::new();
-                while let Some(line) = lines.next() {
-                    let line = line.expect("Failed to read line");
-                    content.push_str(&line);
-                    content.push('\n');
-                }
-                content
-            };
-
-            let log_tags = tags.clone();
-            let timestamp = Utc::now().to_rfc3339();
-            let directory = env::current_dir()
-                .expect("Failed to get current directory")
-                .to_str()
-                .expect("Failed to convert path to string")
-                .to_string();
-
-            // 数据库连接和插入逻辑
-            let mut db_path = config_dir.clone();
-            db_path.push("dlog.db");
-
-            match Connection::open(&db_path) {
-                Ok(conn) => {
-                    let mut stmt = conn.prepare(
-                        "INSERT INTO logs (timestamp, directory, content, tags) VALUES (?1, ?2, ?3, ?4)",
-                    ).unwrap();
-                    
-                    let tags_str = log_tags.unwrap_or_else(|| "".to_string());
-                    
-                    match stmt.execute([timestamp, directory, log_content, tags_str]) {
-                        Ok(_) => println!("日志已成功记录。"),
-                        Err(e) => eprintln!("记录日志时发生错误: {}", e),
-                    }
-                },
-                Err(e) => eprintln!("无法连接到数据库: {}", e),
-            }
-        },
-
-
-        Some(Commands::Get { recursive, tags, num }) => {
-            let current_dir = std::env::current_dir()
-                .expect("Failed to get current directory")
-                .to_str()
-                .expect("Failed to convert path to string")
-                .to_string();
-
-
-            let mut query = String::from("SELECT timestamp, content, tags, directory FROM logs WHERE ");
-            let mut params: Vec<String> = Vec::new();
-
-            if *recursive {
-                query.push_str("directory LIKE ? || '%' ");
-                params.push(current_dir);
-            } else {
-                query.push_str("directory = ? ");
-                params.push(current_dir);
-            }
-
-            query.push_str("ORDER BY timestamp DESC");
-
-            let num_entries = num.or(Some(1)); // <--- 关键修改：如果 num 为 None，则默认为 Some(1)
-            
-            if let Some(n) = num_entries {
-                query.push_str(" LIMIT ?");
-                params.push(n.to_string());
-            }
-
-            let params_slice: Vec<&dyn rusqlite::ToSql> = params.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
-
-            let home_dir = dirs::home_dir().expect("Could not find home directory");
-            let mut db_path = PathBuf::from(&home_dir);
-            db_path.push(".config/dlog/dlog.db");
-
-            get_logs_and_print(&db_path, &query, &params_slice, *tags);
-        },
-
-
-        None => {
-            println!("没有指定任何命令。使用 --help 查看可用命令。");
-        }
-    }
-}
-
-fn get_logs_and_print(db_path: &PathBuf, query: &str, params: &[&dyn rusqlite::ToSql], with_tags: bool) {
-    let conn = match Connection::open(db_path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("无法连接到数据库: {}", e);
-            return;
-        }
+        Commands::Init(args) => commands::init::handle_init(args, &db_path)?,
+        Commands::Log(args) => commands::log::handle_log(args, &db_path)?,
+        Commands::Get(args) => commands::get::handle_get(args, &db_path)?,
+        Commands::Fix(args) => commands::fix::handle_fix(args, &db_path)?,
+        Commands::Pop(args) => commands::pop::handle_pop(args, &db_path)?,
     };
 
-    let mut stmt = match conn.prepare(query) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("SQL 查询准备失败: {}", e);
-            return;
-        }
-    };
-
-    let log_iter = match stmt.query_map(params, |row| {
-        Ok(LogEntry {
-            timestamp: row.get(0)?,
-            content: row.get(1)?,
-            tags: row.get(2)?,
-            _directory: row.get(3)?,
-        })
-    }) {
-        Ok(i) => i,
-        Err(e) => {
-            eprintln!("查询执行失败: {}", e);
-            return;
-        }
-    };
-
-    for log in log_iter {
-        let log = match log {
-            Ok(l) => l,
-            Err(e) => {
-                eprintln!("读取日志条目时发生错误: {}", e);
-                continue;
-            }
-        };
-
-        // 格式化输出
-        let dt: DateTime<Utc> = log.timestamp.parse().unwrap_or_else(|_| Utc::now());
-        let formatted_time = dt.format("%Y-%m-%d %H:%M:%S").to_string();
-
-        if with_tags {
-            let tags_str = log.tags.unwrap_or_else(|| "No tags".to_string());
-            println!("时间: {} | 标签: {}", formatted_time, tags_str);
-        } else {
-            println!("时间: {}", formatted_time);
-        }
-        
-        println!("{}", log.content);
-        println!("=============================");
-    }
+    Ok(())
 }
