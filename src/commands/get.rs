@@ -4,6 +4,7 @@ use crate::GetArgs;
 use anyhow::{Context, Result as AnyhowResult};
 use rusqlite::{params_from_iter, Connection, Result, Row, ToSql};
 use std::path::PathBuf;
+use chrono::{DateTime, FixedOffset, Offset, ParseError, Local};
 
 const DEBUG: bool = false;
 
@@ -248,3 +249,62 @@ pub fn handle_get(args: &GetArgs, db_path: &PathBuf) -> rusqlite::Result<()> {
 // 阶段三：格式化输出 (Formatter)
 // 这个函数的职责是：接收日志数据和显示选项，然后漂亮地打印它们。
 // ====================================================================
+fn display_local_time(utc_time_str: &str) {
+    // 尝试多种解析方式
+    let parse_result = DateTime::parse_from_rfc3339(utc_time_str)
+        .or_else(|_| {
+            // 如果标准解析失败，尝试更宽松的解析
+            DateTime::parse_from_str(utc_time_str, "%+")
+        })
+        .or_else(|_| {
+            // 如果还失败，尝试手动处理时区信息
+            manual_time_parse(utc_time_str)
+        });
+    
+    match parse_result {
+        Ok(utc_time) => {
+            // 转换为本地时区
+            let local_time = utc_time.with_timezone(&Local);
+            
+            // 友好显示格式
+            println!("[用户显示] 本地时间: {}", local_time.format("%Y年%m月%d日 %H时%M分%S秒"));
+            println!("[用户显示] 详细格式: {}", local_time.format("%A, %B %d, %Y at %I:%M:%S %p"));
+            println!("[用户显示] 简洁格式: {}", local_time.format("%Y-%m-%d %H:%M:%S"));
+            
+            // 显示时区信息
+            let timezone_offset = local_time.offset().fix().local_minus_utc() / 3600;
+            println!("[用户显示] 时区: UTC{}{:02}", 
+                     if timezone_offset >= 0 { "+" } else { "-" }, 
+                     timezone_offset.abs());
+        }
+        Err(e) => {
+            eprintln!("错误: 无法解析时间字符串 '{}': {}", utc_time_str, e);
+        }
+    }
+}
+
+fn manual_time_parse(time_str: &str) -> Result<DateTime<FixedOffset>, ParseError> {
+    // 移除纳秒部分后的精度，保留最多6位小数
+    let simplified = if let Some(dot_pos) = time_str.find('.') {
+        if let Some(z_pos) = time_str[dot_pos..].find(|c| c == 'Z' || c == '+') {
+            let decimal_part = &time_str[dot_pos+1..dot_pos+z_pos];
+            let limited_decimal = if decimal_part.len() > 6 {
+                &decimal_part[..6] // 限制为6位小数
+            } else {
+                decimal_part
+            };
+            
+            format!("{}.{}{}", 
+                    &time_str[..dot_pos], 
+                    limited_decimal,
+                    &time_str[dot_pos+z_pos..])
+        } else {
+            time_str.to_string()
+        }
+    } else {
+        time_str.to_string()
+    };
+    
+    DateTime::parse_from_rfc3339(&simplified)
+}
+
