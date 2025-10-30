@@ -113,7 +113,24 @@ pub struct GetArgs {
     #[arg(long, value_name = "KEYWORD")]
     pub keyword: Option<String>,
 
+    /// 最终显示最新的 N 条日志 (默认为 1)
+    #[arg(short, long, default_value_t = 1)]
+    pub num: u32,
+
+
     /* 最终格式化输出使用的参数 */
+
+    /// 格式化输出选项, 默认为单行紧凑输出, 可以选择 -f <tags/ider/json> 进行不同格式的输出
+    #[arg(
+        short,
+        long,
+        value_name = "FROMAT",
+        default_value = "compact",
+        value_parser = ["compact", "tags", "iden", "json"]
+        )]
+    pub format: String,
+
+    /*
     /// 在结果中显示每条日志的唯一标识符 (短哈希)
     #[arg(short, long)]
     pub identifier: bool,
@@ -121,10 +138,7 @@ pub struct GetArgs {
     /// 在查询结果中一并显示每条日志的标签。
     #[arg(short = 't', long, visible_alias = "show-tags")]
     pub tags: bool,
-
-    /// 最终显示最新的 N 条日志 (默认为 1)
-    #[arg(short, long, default_value_t = 1)]
-    pub num: u32,
+    */
 }
 
 /// 精确修改某一条已存在的日志。

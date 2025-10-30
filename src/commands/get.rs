@@ -5,9 +5,11 @@ use anyhow::{Context, Result as AnyhowResult};
 use rusqlite::{params_from_iter, Connection, Result, Row, ToSql};
 use std::path::PathBuf;
 use chrono::{DateTime, FixedOffset, Offset, ParseError, Local};
+use serde::Serialize;
+use std::fmt;
 
 // 定义一个 LogEntry 结构体，用于在最后阶段存放和显示日志数据
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 struct Log {
     id: i32,
     timestamp: String,
@@ -31,8 +33,51 @@ impl Log {
             level: row.get("level")?,
         })
     }
+
+    /// 将 UTC 时间转换为本地时间字符串
+    fn get_local_time(&self) -> Option<String> {
+        // 复用你现有的时间解析逻辑
+        let parse_result = DateTime::parse_from_rfc3339(&self.timestamp)
+            .or_else(|_| DateTime::parse_from_str(&self.timestamp, "%+"))
+            .or_else(|_| manual_time_parse(&self.timestamp));
+
+        parse_result.ok().map(|utc_time| {
+            let local_time = utc_time.with_timezone(&Local);
+            local_time.format("%Y-%m-%d %H:%M:%S").to_string()
+        })
+    }
+
+    /// 从 metadata 字段获取短哈希标识
+    fn get_short_hash(&self) -> String {
+        // 如果 metadata 字段存在且包含哈希值，则使用它
+        if let Some(metadata) = &self.metadata {
+            // 假设 metadata 字段直接存储哈希值
+            // 如果 metadata 是 JSON 格式，可能需要解析
+            metadata.clone()
+        } else {
+            // 如果没有 metadata，生成一个简单的备用标识
+            format!("{:x}", self.id)
+        }
+    }
+
 }
 
+// 为 Log 实现 Display trait，用于简洁模式
+impl fmt::Display for Log {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let local_time = self.get_local_time().unwrap_or_else(|| self.timestamp.clone());
+        /*
+        let content_preview = if self.content.len() > 30 {
+            format!("{}...", &self.content[..27])
+        } else {
+            self.content.clone()
+        };
+        */
+        let content_preview = self.content.clone();
+
+        write!(f, "{} | {}", local_time, content_preview)
+    }
+}
 
 // ====================================================================
 // 主处理函数 (The Conductor)
@@ -84,14 +129,14 @@ pub fn handle_get(args: &GetArgs, db_path: &PathBuf) -> rusqlite::Result<()> {
 
     // --- 第三步：如果没有执行动作，则获取完整日志并打印 ---
     if !action_was_taken {
+        let logs = get_logs_by_ids(&conn, &ids)?;
 
-        match get_logs_by_ids(&conn, &ids) {
-            Ok(logs) => {
-                for log in logs {
-                    println!("Found log: {:#?}", log);
-                }
-            }
-            Err(e) => eprintln!("Error querying logs: {}", e),
+        // 根据参数选择输出格式（这里需要为 GetArgs 添加 format 字段）
+        match args.format.as_str() {
+            "tags" => format_detailed1(&logs),
+            "iden" => format_detailed2(&logs),
+            "json" => format_json(&logs),
+            _ => format_compact(&logs), // 默认为简洁模式
         }
     }
 
@@ -216,6 +261,53 @@ fn get_logs_by_ids(conn: &Connection, ids: &[i32]) -> Result<Vec<Log>> {
 // 阶段三：格式化输出 (Formatter)
 // 这个函数的职责是：接收日志数据和显示选项，然后漂亮地打印它们。
 // ====================================================================
+
+/// 简洁模式：时间 | content 字段的前 30 个字
+fn format_compact(logs: &[Log]) {
+    for log in logs {
+        println!("{}", log); // 使用 Display trait 的实现
+    }
+}
+
+/// 详细模式1：时间 | 目录 | tags | 完整 content
+fn format_detailed1(logs: &[Log]) {
+    for log in logs {
+        let local_time = log.get_local_time().unwrap_or_else(|| log.timestamp.clone());
+
+        println!("时间: {}", local_time);
+        println!("目录: {}", log.directory);
+
+        if let Some(tags) = &log.tags {
+            println!("标签: {}", tags);
+        }
+
+        println!("内容: {}", log.content);
+        println!("---"); // 分隔线
+    }
+}
+
+/// 详细模式2：时间 | 短哈希标识 | 完整 content
+fn format_detailed2(logs: &[Log]) {
+    for log in logs {
+        let local_time = log.get_local_time().unwrap_or_else(|| log.timestamp.clone());
+        let short_hash = log.get_short_hash();
+
+        println!("时间: {}", local_time);
+        println!("标识: {}", short_hash);
+        println!("内容: {}", log.content);
+        println!("---"); // 分隔线
+    }
+}
+
+/// JSON 模式：打印 Json 样式的信息
+fn format_json(logs: &[Log]) {
+    match serde_json::to_string_pretty(&logs) {
+        Ok(json) => println!("{}", json),
+        Err(e) => eprintln!("JSON 序列化失败: {}", e),
+    }
+}
+
+
 /*
 fn display_local_time(utc_time_str: &str) {
     // 尝试多种解析方式
@@ -250,6 +342,7 @@ fn display_local_time(utc_time_str: &str) {
         }
     }
 }
+*/
 
 fn manual_time_parse(time_str: &str) -> Result<DateTime<FixedOffset>, ParseError> {
     // 移除纳秒部分后的精度，保留最多6位小数
@@ -261,7 +354,7 @@ fn manual_time_parse(time_str: &str) -> Result<DateTime<FixedOffset>, ParseError
             } else {
                 decimal_part
             };
-            
+
             format!("{}.{}{}", 
                     &time_str[..dot_pos], 
                     limited_decimal,
@@ -272,7 +365,7 @@ fn manual_time_parse(time_str: &str) -> Result<DateTime<FixedOffset>, ParseError
     } else {
         time_str.to_string()
     };
-    
+
     DateTime::parse_from_rfc3339(&simplified)
 }
-*/
+
