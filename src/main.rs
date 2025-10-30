@@ -82,6 +82,10 @@ pub struct GetArgs {
     #[arg(long)]
     pub all: bool,
 
+    /// 查询当前目录的日志和全局日志
+    #[arg(short, long)]
+    pub global: bool,
+
     /* 决定 WHERE 子句的参数 其二 时间字段筛选 */
     /// 筛选今天的日志
     #[arg(long)]
@@ -94,6 +98,11 @@ pub struct GetArgs {
     /// 筛选最近 N 小时内的日志
     #[arg(short = 'H', long, value_name = "HOURS")]
     pub hour: Option<u32>,
+
+    /// 筛选最近 M 分钟内的日志
+    #[arg(short = 'M', long, value_name = "MINUTES")]
+    pub minute: Option<u32>,
+
 
     /* 决定 WHERE 子句的参数 其三 内容匹配筛选 */
     /// 筛选包含特定标签的日志
