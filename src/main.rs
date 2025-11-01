@@ -119,6 +119,11 @@ pub struct GetArgs {
     #[arg(short, long, default_value_t = 1)]
     pub num: u32,
 
+    /// 是否按照时间逆序排序
+    #[arg(long, default_value_t = false)]
+    pub reverse: bool,
+
+
 
     /* 最终格式化输出使用的参数 */
 
@@ -217,11 +222,15 @@ fn main() -> Result<()> {
         db::run_migrations(&db_path)?;
     }
 
+
     // 核心的模式匹配与分发逻辑
     match &cli.command {
         Commands::Init(args) => commands::init::handle_init(args, &db_path)?,
         Commands::Log(args) => commands::log::handle_log(args, &db_path)?,
-        Commands::Get(args) => commands::get::handle_get(args, &db_path)?,
+        Commands::Get(args) => {
+            println!("{:#?}", args);
+            commands::get::handle_get(args, &db_path)?
+        },
         Commands::Fix(args) => commands::fix::handle_fix(args, &db_path)?,
         Commands::Pop(args) => commands::pop::handle_pop(args, &db_path)?,
     };

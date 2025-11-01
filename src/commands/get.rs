@@ -160,15 +160,20 @@ fn select_log_ids(conn: &Connection, args: &GetArgs) -> AnyhowResult<Vec<i32>> {
             .to_str()
             .context("无法将当前目录转换为字符串")?
             .to_string();
+
         if args.recursive {
             conditions.push("directory LIKE ?".to_string());
             params.push(Box::new(format!("{}%", current_dir)));
-        } else if args.global {
-            conditions.push("OR directory == 'global'".to_string());
         } else {
             conditions.push("directory = ?".to_string());
             params.push(Box::new(current_dir));
         }
+        /// FIX!!! TODO
+        /*
+        if args.global {
+            conditions.push("OR directory == 'global'".to_string());
+        }
+        */
     }
 
     if args.today {
@@ -205,7 +210,11 @@ fn select_log_ids(conn: &Connection, args: &GetArgs) -> AnyhowResult<Vec<i32>> {
 
 
     let mut sql = format!("SELECT id FROM logs{}", where_clause);
-    sql.push_str(" ORDER BY timestamp DESC LIMIT ?");
+    if !args.reverse {
+        sql.push_str(" ORDER BY timestamp DESC LIMIT ?");
+    } else {
+        sql.push_str(" ORDER BY timestamp ASC LIMIT ?");
+    }
     params.push(Box::new(args.num));
 
     // 执行查询并收集 ID
