@@ -4,7 +4,7 @@ use crate::GetArgs;
 use anyhow::{Context, Result as AnyhowResult};
 use rusqlite::{params_from_iter, Connection, Result, Row, ToSql};
 use std::path::PathBuf;
-use chrono::{DateTime, FixedOffset, Offset, ParseError, Local};
+use chrono::{DateTime, FixedOffset, ParseError, Local};
 use serde::Serialize;
 use std::fmt;
 
@@ -93,6 +93,7 @@ pub fn handle_get(args: &GetArgs, db_path: &PathBuf) -> rusqlite::Result<()> {
         Err(e) => panic!("{:?}", e),
     };
 
+    println!("IDs Found: {:?}", ids);
 
     if ids.is_empty() {
         println!("未找到匹配的日志。");
@@ -274,14 +275,14 @@ fn format_detailed1(logs: &[Log]) {
     for log in logs {
         let local_time = log.get_local_time().unwrap_or_else(|| log.timestamp.clone());
 
-        println!("时间: {}", local_time);
-        println!("目录: {}", log.directory);
+        println!("Time : {}", local_time);
+        println!("Dir  : {}", log.directory);
 
         if let Some(tags) = &log.tags {
-            println!("标签: {}", tags);
+            println!("Tags : {}", tags);
         }
 
-        println!("内容: {}", log.content);
+        println!("Log  : {}", log.content);
         println!("---"); // 分隔线
     }
 }
@@ -292,9 +293,9 @@ fn format_detailed2(logs: &[Log]) {
         let local_time = log.get_local_time().unwrap_or_else(|| log.timestamp.clone());
         let short_hash = log.get_short_hash();
 
-        println!("时间: {}", local_time);
-        println!("标识: {}", short_hash);
-        println!("内容: {}", log.content);
+        println!("Time : {}", local_time);
+        println!("Hash : {}", short_hash);
+        println!("Log  : {}", log.content);
         println!("---"); // 分隔线
     }
 }
@@ -306,43 +307,6 @@ fn format_json(logs: &[Log]) {
         Err(e) => eprintln!("JSON 序列化失败: {}", e),
     }
 }
-
-
-/*
-fn display_local_time(utc_time_str: &str) {
-    // 尝试多种解析方式
-    let parse_result = DateTime::parse_from_rfc3339(utc_time_str)
-        .or_else(|_| {
-            // 如果标准解析失败，尝试更宽松的解析
-            DateTime::parse_from_str(utc_time_str, "%+")
-        })
-        .or_else(|_| {
-            // 如果还失败，尝试手动处理时区信息
-            manual_time_parse(utc_time_str)
-        });
-    
-    match parse_result {
-        Ok(utc_time) => {
-            // 转换为本地时区
-            let local_time = utc_time.with_timezone(&Local);
-            
-            // 友好显示格式
-            println!("[用户显示] 本地时间: {}", local_time.format("%Y年%m月%d日 %H时%M分%S秒"));
-            println!("[用户显示] 详细格式: {}", local_time.format("%A, %B %d, %Y at %I:%M:%S %p"));
-            println!("[用户显示] 简洁格式: {}", local_time.format("%Y-%m-%d %H:%M:%S"));
-            
-            // 显示时区信息
-            let timezone_offset = local_time.offset().fix().local_minus_utc() / 3600;
-            println!("[用户显示] 时区: UTC{}{:02}", 
-                     if timezone_offset >= 0 { "+" } else { "-" }, 
-                     timezone_offset.abs());
-        }
-        Err(e) => {
-            eprintln!("错误: 无法解析时间字符串 '{}': {}", utc_time_str, e);
-        }
-    }
-}
-*/
 
 fn manual_time_parse(time_str: &str) -> Result<DateTime<FixedOffset>, ParseError> {
     // 移除纳秒部分后的精度，保留最多6位小数
