@@ -56,13 +56,15 @@ pub struct LogArgs {
 /// 还可以附加--add-tag, --fix-path, --delete等动作参数来对查询结果进行批量操作。
 #[derive(Args, Debug)]
 pub struct GetArgs {
+
     /* 决定 SELECT/UPDATE/DELETE 阶段的SQL参数 */
+ 
     /// [动作] 为所有查询命中的日志追加一个新标签
     #[arg(long, group = "action", value_name = "TAG")]
     pub add_tag: Option<String>,
 
     /// [动作] 批量修改所有查询命中的日志的目录信息
-    #[arg(long, group = "action", value_name = "PATH")]
+    #[arg(long, group = "action", requires = "force", value_name = "PATH")]
     pub fix_path: Option<String>,
 
     /// [动作] 将查询命中的日志移动到备份区
