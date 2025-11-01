@@ -228,7 +228,7 @@ fn main() -> Result<()> {
         Commands::Init(args) => commands::init::handle_init(args, &db_path)?,
         Commands::Log(args) => commands::log::handle_log(args, &db_path)?,
         Commands::Get(args) => {
-            println!("{:#?}", args);
+            //println!("{:#?}", args);
             commands::get::handle_get(args, &db_path)?
         },
         Commands::Fix(args) => commands::fix::handle_fix(args, &db_path)?,

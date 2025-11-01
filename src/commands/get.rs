@@ -162,18 +162,20 @@ fn select_log_ids(conn: &Connection, args: &GetArgs) -> AnyhowResult<Vec<i32>> {
             .to_string();
 
         if args.recursive {
-            conditions.push("directory LIKE ?".to_string());
+            if args.global {
+                conditions.push("(directory LIKE ? OR directory == 'global')".to_string());
+            } else {
+                conditions.push("directory LIKE ?".to_string());
+            }
             params.push(Box::new(format!("{}%", current_dir)));
         } else {
-            conditions.push("directory = ?".to_string());
+            if args.global {
+                conditions.push("(directory = ? OR directory == 'global')".to_string());
+            } else {
+                conditions.push("directory = ?".to_string());
+            }
             params.push(Box::new(current_dir));
         }
-        /// FIX!!! TODO
-        /*
-        if args.global {
-            conditions.push("OR directory == 'global'".to_string());
-        }
-        */
     }
 
     if args.today {
@@ -216,6 +218,8 @@ fn select_log_ids(conn: &Connection, args: &GetArgs) -> AnyhowResult<Vec<i32>> {
         sql.push_str(" ORDER BY timestamp ASC LIMIT ?");
     }
     params.push(Box::new(args.num));
+
+    println!("Final SQL Code: [{:?}]", sql);
 
     // 执行查询并收集 ID
     let mut stmt = conn.prepare(&sql)?;
