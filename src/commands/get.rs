@@ -93,7 +93,7 @@ pub fn handle_get(args: &GetArgs, db_path: &PathBuf) -> rusqlite::Result<()> {
         Err(e) => panic!("{:?}", e),
     };
 
-    println!("IDs Found: {:?}", ids);
+    /// println!("IDs Found: {:?}", ids);
 
     if ids.is_empty() {
         println!("未找到匹配的日志。");
@@ -219,7 +219,7 @@ fn select_log_ids(conn: &Connection, args: &GetArgs) -> AnyhowResult<Vec<i32>> {
     }
     params.push(Box::new(args.num));
 
-    println!("Final SQL Code: [{:?}]", sql);
+    // println!("Final SQL Code: [{:?}]", sql);
 
     // 执行查询并收集 ID
     let mut stmt = conn.prepare(&sql)?;
