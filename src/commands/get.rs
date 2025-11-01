@@ -93,7 +93,7 @@ pub fn handle_get(args: &GetArgs, db_path: &PathBuf) -> rusqlite::Result<()> {
         Err(e) => panic!("{:?}", e),
     };
 
-    /// println!("IDs Found: {:?}", ids);
+    // println!("IDs Found: {:?}", ids);
 
     if ids.is_empty() {
         println!("未找到匹配的日志。");
